@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebProspector AI — Cristian Ferreyra</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0a0f;--surface:#12121a;--card:#1a1a26;--border:#2a2a3d;--accent:#ff4d6d;--accent2:#7c3aed;--accent3:#06b6d4;--text:#e8e8f0;--muted:#6b6b8a;--success:#10b981;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  header{padding:28px 0 20px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+  .hi{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .logo-text{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+  .logo-text span{color:var(--accent);}
+  .badge{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);letter-spacing:1px;text-transform:uppercase;}
+  .steps{display:flex;margin-bottom:24px;}
+  .stp{flex:1;padding:12px 8px;text-align:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;border:1px solid var(--border);border-right:none;color:var(--muted);background:var(--surface);transition:all 0.2s;cursor:default;}
+  .stp:first-child{border-radius:8px 0 0 8px;}
+  .stp:last-child{border-right:1px solid var(--border);border-radius:0 8px 8px 0;}
+  .stp.active{background:var(--card);color:var(--text);border-color:var(--accent2);}
+  .stp.done{background:rgba(16,185,129,0.07);color:var(--success);border-color:rgba(16,185,129,0.3);}
+  .stp-n{display:block;font-size:16px;margin-bottom:2px;}
+  .status-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;font-size:13px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .dot.on{background:var(--success);animation:pulse 1.5s infinite;}
+  .dot.err{background:var(--accent);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:24px;position:relative;overflow:hidden;display:none;}
+  .panel.active{display:block;}
+  .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));}
+  .ptitle{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:20px;}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media(max-width:600px){.g2{grid-template-columns:1fr;}}
+  .f{display:flex;flex-direction:column;gap:6px;}
+  .f.full{grid-column:1/-1;}
+  label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  input,select,textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-family:'DM Mono',monospace;font-size:13px;transition:border-color 0.2s;outline:none;width:100%;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent2);}
+  select option{background:var(--surface);}
+  textarea{resize:vertical;}
+  .hint{font-size:11px;color:var(--muted);margin-top:3px;}
+  .hint a{color:var(--accent3);text-decoration:none;}
+  /* City autocomplete */
+  .city-wrap{position:relative;}
+  .city-suggestions{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--accent2);border-top:none;border-radius:0 0 8px 8px;z-index:50;display:none;max-height:200px;overflow-y:auto;}
+  .city-sug{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;}
+  .city-sug:last-child{border-bottom:none;}
+  .city-sug:hover{background:var(--surface);}
+  .city-sug strong{color:var(--accent3);}
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap;}
+  .bp{background:linear-gradient(135deg,var(--accent),#c2185b);color:white;box-shadow:0 4px 20px rgba(255,77,109,0.3);}
+  .bp:hover:not(:disabled){transform:translateY(-1px);}
+  .bp:disabled{opacity:0.4;cursor:not-allowed;}
+  .bs{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+  .bs:hover{border-color:var(--accent2);}
+  .bg{background:linear-gradient(135deg,var(--success),#059669);color:white;}
+  .br{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;}
+  .sm{padding:7px 14px;font-size:12px;border-radius:6px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  /* Progress */
+  .prog-wrap{margin-top:10px;}
+  .prog-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;}
+  .prog-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.4s;}
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+  @media(max-width:700px){.stats{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .sc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+  .sv{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--accent);}
+  .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;}
+  /* Preview */
+  .pvbox{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px;}
+  .pvtabs{display:flex;border-bottom:1px solid var(--border);}
+  .pvtab{flex:1;padding:12px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;text-align:center;}
+  .pvtab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .pvcontent{padding:20px;}
+  .wa-bubble{background:#1f2c1f;border:1px solid #2a3d2a;border-radius:4px 16px 16px 16px;padding:14px 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:#e2f5e2;font-family:'DM Mono',monospace;}
+  .em-subj{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;font-weight:600;margin-bottom:10px;}
+  .em-body{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;font-family:'DM Mono',monospace;max-height:240px;overflow-y:auto;}
+  /* Biz cards */
+  .bizlist{display:flex;flex-direction:column;gap:10px;}
+  .bc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;transition:border-color 0.2s;}
+  .bc.sw{border-color:rgba(37,211,102,0.4);}
+  .bc.se{border-color:rgba(6,182,212,0.4);}
+  .bc.sb{border-color:var(--success);background:rgba(16,185,129,0.03);}
+  .bc.skipped{opacity:0.45;border-color:var(--border);}
+  .bn{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:2px;}
+  .bt{display:inline-block;font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(124,58,237,0.15);color:var(--accent2);border:1px solid rgba(124,58,237,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+  .bi{display:flex;flex-wrap:wrap;gap:10px;}
+  .bd{font-size:11px;color:var(--muted);}
+  .bd a{color:var(--accent3);text-decoration:none;}
+  .nw{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(255,77,109,0.1);color:var(--accent);border:1px solid rgba(255,77,109,0.25);margin-top:6px;}
+  .ig{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(131,58,180,0.12);color:#c084fc;border:1px solid rgba(131,58,180,0.3);margin-top:6px;margin-left:4px;}
+  .already{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);margin-top:6px;margin-left:4px;}
+  .cs{display:flex;flex-direction:column;gap:5px;align-items:flex-end;min-width:88px;}
+  .tag{font-size:10px;padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .tw{background:rgba(37,211,102,0.1);color:#25d366;border:1px solid rgba(37,211,102,0.25);}
+  .te{background:rgba(6,182,212,0.1);color:var(--accent3);border:1px solid rgba(6,182,212,0.25);}
+  .tx{background:rgba(255,77,109,0.1);color:var(--accent);border:1px solid rgba(255,77,109,0.25);}
+  .tp{background:rgba(107,107,138,0.1);color:var(--muted);border:1px solid var(--border);}
+  .tsk{background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);}
+  .rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .rt{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+  .cpill{background:var(--accent);color:white;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700;margin-left:8px;}
+  .log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--muted);max-height:140px;overflow-y:auto;margin-top:10px;line-height:1.9;}
+  .log p{margin:0;}
+  .log .ok{color:var(--success);}
+  .log .er{color:var(--accent);}
+  .log .nf{color:var(--accent3);}
+  .ejs-box{background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:16px;}
+  .ejs-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;}
+  /* History panel */
+  .hist-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+  .hist-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;}
+  .hist-meta{color:var(--muted);font-size:11px;margin-top:2px;}
+  .hist-tags{display:flex;gap:6px;flex-shrink:0;}
+  /* Tabs for results */
+  .rtabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);}
+  .rtab{padding:9px 16px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
+  .rtab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .section{display:none;}
+  .section.active{display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="hi">
+    <div class="logo">
+      <div class="logo-icon">🎯</div>
+      <div>
+        <div class="logo-text">Web<span>Prospector</span> AI</div>
+        <div style="font-size:11px;color:var(--muted)">CRISFERRE-ANALISTA · Cristian Ferreyra</div>
+      </div>
+    </div>
+    <div class="badge">v3.0</div>
+  </div>
+</header>
+
+<div class="steps">
+  <div class="stp active" id="stp1"><span class="stp-n">⚙️</span>Config</div>
+  <div class="stp" id="stp2"><span class="stp-n">👁️</span>Mensajes</div>
+  <div class="stp" id="stp3"><span class="stp-n">🔍</span>Buscar</div>
+  <div class="stp" id="stp4"><span class="stp-n">🚀</span>Enviar</div>
+  <div class="stp" id="stp5"><span class="stp-n">📋</span>Historial</div>
+</div>
+
+<div class="status-bar">
+  <div class="dot" id="dot"></div>
+  <span id="stxt">Completá la configuración para comenzar.</span>
+</div>
+
+<!-- ══ PANEL 1 — CONFIG ══ -->
+<div class="panel active" id="p1">
+  <div class="ptitle">// Paso 1 — Configuración</div>
+  <div class="g2">
+    <div class="f">
+      <label>Google Places API Key</label>
+      <input type="password" id="apiKey" onchange="saveKeys()" placeholder="AIza...">
+    </div>
+
+    <div class="f">
+      <label>Ciudad a buscar</label>
+      <div class="city-wrap">
+        <input type="text" id="cityInput" placeholder="Escribí el nombre de la ciudad..." autocomplete="off" oninput="onCityInput()" onblur="setTimeout(hideSug,200)">
+        <div class="city-suggestions" id="citySug"></div>
+      </div>
+      <div class="hint">Podés buscar cualquier ciudad de Argentina o del mundo</div>
+    </div>
+
+    <div class="f">
+      <label>Rubro a buscar</label>
+      <select id="bizType">
+        <optgroup label="🍽️ Gastronomía">
+          <option value="restaurant">Restaurantes</option>
+          <option value="cafe">Cafeterías / Confiterías</option>
+          <option value="bakery">Panaderías</option>
+          <option value="bar">Bares</option>
+          <option value="food">Toda la gastronomía</option>
+        </optgroup>
+        <optgroup label="🏥 Salud">
+          <option value="physiotherapist">Kinesiólogos</option>
+          <option value="dentist">Odontólogos</option>
+          <option value="doctor">Médicos / Consultorios</option>
+          <option value="pharmacy">Farmacias</option>
+          <option value="hospital">Clínicas / Sanatorios</option>
+          <option value="health">Toda la salud</option>
+        </optgroup>
+        <optgroup label="💅 Belleza y Estética">
+          <option value="beauty_salon">Estéticas / Centros de belleza</option>
+          <option value="hair_care">Peluquerías</option>
+          <option value="spa">Spas</option>
+          <option value="nail_salon">Manicuría / Uñas</option>
+          <option value="beauty">Toda la belleza</option>
+        </optgroup>
+        <optgroup label="🏋️ Deporte y Bienestar">
+          <option value="gym">Gimnasios</option>
+          <option value="fitness">Deporte y bienestar</option>
+        </optgroup>
+        <optgroup label="🏪 Comercios">
+          <option value="clothing_store">Ropa / Indumentaria</option>
+          <option value="shoe_store">Zapaterías</option>
+          <option value="jewelry_store">Joyerías / Bijouterie</option>
+          <option value="furniture_store">Mueblería / Decoración</option>
+          <option value="florist">Florería</option>
+          <option value="pet_store">Veterinarias / Pet shops</option>
+          <option value="store">Todos los comercios</option>
+        </optgroup>
+        <optgroup label="🔧 Servicios Profesionales">
+          <option value="lawyer">Abogados / Estudios jurídicos</option>
+          <option value="accounting">Contadores / Estudios contables</option>
+          <option value="real_estate_agency">Inmobiliarias</option>
+          <option value="insurance_agency">Seguros</option>
+          <option value="travel_agency">Agencias de viaje</option>
+          <option value="electrician">Electricistas</option>
+          <option value="plumber">Plomeros / Gas</option>
+          <option value="services">Todos los servicios</option>
+        </optgroup>
+        <optgroup label="🎓 Educación">
+          <option value="school">Escuelas / Institutos</option>
+          <option value="tutoring">Academias / Tutorías</option>
+        </optgroup>
+        <optgroup label="🏨 Alojamiento y Turismo">
+          <option value="lodging">Hoteles / Hospedajes</option>
+          <option value="tourist_attraction">Atractivos turísticos</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="f">
+      <label>Cantidad a buscar</label>
+      <select id="maxR">
+        <option value="20">20 negocios</option>
+        <option value="40" selected>40 negocios</option>
+        <option value="60">60 negocios</option>
+        <option value="100">100 negocios</option>
+      </select>
+    </div>
+
+    <div class="f full">
+      <div class="ejs-box">
+        <div class="ejs-title">✉️ EmailJS — Envío automático de emails</div>
+        <div class="g2" style="margin-bottom:0">
+          <div class="f">
+            <label>Public Key</label>
+            <input type="password" id="ejsPub" onchange="saveKeys()" placeholder="Tu Public Key">
+          </div>
+          <div class="f">
+            <label>Service ID</label>
+            <input type="text" id="ejsSvc" onchange="saveKeys()" placeholder="service_xxxxxxx">
+          </div>
+          <div class="f">
+            <label>Template ID</label>
+            <input type="text" id="ejsTpl" onchange="saveKeys()" placeholder="template_xxxxxxx">
+            <div class="hint">Variables: <strong>to_email · to_name · subject · message</strong></div>
+          </div>
+          <div class="f">
+            <label>Tu Gmail</label>
+            <input type="email" id="myEmail" onchange="saveKeys()" placeholder="tu@gmail.com">
+          </div>
+          <div class="f">
+            <label>Tu WhatsApp</label>
+            <input type="text" id="myPhone" onchange="saveKeys()" placeholder="+5493624000000">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn bp" onclick="gotoPreview()">Ver mensajes antes de buscar →</button>
+    <button class="btn bs" onclick="gotoStep(5)">📋 Ver historial</button>
+  </div>
+</div>
+
+<!-- ══ PANEL 2 — PREVIEW ══ -->
+<div class="panel" id="p2">
+  <div class="ptitle">// Paso 2 — Así se ven los mensajes</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Esto es <strong style="color:var(--text)">exactamente</strong> lo que va a recibir cada negocio. Editá el texto si querés cambiar algo.</div>
+  <div class="pvbox">
+    <div class="pvtabs">
+      <button class="pvtab active" id="ptWA" onclick="switchPV('wa')">📱 WhatsApp</button>
+      <button class="pvtab" id="ptEM" onclick="switchPV('em')">✉️ Email</button>
+    </div>
+    <div class="pvcontent" id="pvContent"></div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="f full">
+      <label>Asunto del email</label>
+      <input type="text" id="emSubj" value="Te armé una demo gratuita para tu negocio">
+    </div>
+    <div class="f">
+      <label>Mensaje WhatsApp</label>
+      <textarea id="waTpl" rows="11">Hola! 👋 Te escribo de parte de CRISFERRE-ANALISTA.
+
+Vi que *{NOMBRE}* aparece en Google Maps pero todavía no tiene sitio web propio.
+
+Hoy el 80% de la gente busca online antes de salir 📱 — sin web, te están eligiendo a la competencia.
+
+Te armé una *demo gratuita* de cómo quedaría la web de {NOMBRE}. Sin compromiso, solo para que la veas.
+
+¿Te la mando? 😊
+
+— Cristian Ferreyra</textarea>
+    </div>
+    <div class="f">
+      <label>Cuerpo del email</label>
+      <textarea id="emTpl" rows="11">Hola!
+
+Soy Cristian Ferreyra, me dedico al diseño de páginas web para profesionales y negocios locales en {CIUDAD}.
+
+Vi que {NOMBRE} aparece en Google Maps como {TIPO} pero todavía no tiene sitio web propio. Hoy en día el 80% de las personas busca online antes de contactar a alguien — sin web, muchos clientes te están eligiendo a la competencia sin que te enteres.
+
+Te armé una demo gratuita de cómo quedaría la web de {NOMBRE}, sin ningún compromiso. Si te gusta, el sitio completo vale $50.000 pesos — diseño profesional, listo para usar.
+
+¿Te la mando?
+
+Saludos,
+Cristian Ferreyra
+CRISFERRE-ANALISTA
+{MI_EMAIL}
+{MI_TELEFONO}</textarea>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn bp" onclick="gotoSearch()">✅ Confirmar y Buscar →</button>
+    <button class="btn bs" onclick="gotoStep(1)">← Volver</button>
+    <button class="btn bs sm" onclick="renderPV()">🔄 Actualizar preview</button>
+  </div>
+</div>
+
+<!-- ══ PANEL 3 — BÚSQUEDA ══ -->
+<div class="panel" id="p3">
+  <div class="ptitle">// Paso 3 — Buscando negocios sin web</div>
+  <div class="prog-wrap">
+    <div class="prog-lbl"><span id="pLbl">Iniciando...</span><span id="pPct">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="pFill" style="width:0%"></div></div>
+  </div>
+  <div class="log" id="logBox"></div>
+</div>
+
+<!-- ══ PANEL 4 — RESULTADOS ══ -->
+<div class="panel" id="p4">
+  <div class="ptitle">// Paso 4 — Resultados y envío automático</div>
+  <div class="stats">
+    <div class="sc"><div class="sv" id="stT">0</div><div class="sl">Analizados</div></div>
+    <div class="sc"><div class="sv" id="stN" style="color:var(--accent)">0</div><div class="sl">Sin web</div></div>
+    <div class="sc"><div class="sv" id="stSkip" style="color:#f59e0b">0</div><div class="sl">Ya contactados</div></div>
+    <div class="sc"><div class="sv" id="stW" style="color:#25d366">0</div><div class="sl">WA enviados</div></div>
+    <div class="sc"><div class="sv" id="stE" style="color:var(--accent3)">0</div><div class="sl">Emails enviados</div></div>
+  </div>
+  <div class="rh">
+    <div class="rt">Negocios sin sitio web <span class="cpill" id="cpill">0</span></div>
+    <div class="row">
+      <button class="btn bg" id="waBtn" onclick="startWAMode()">📱 Iniciar envío WhatsApp</button>
+      <button class="btn bp" id="sendBtn" onclick="sendEmailsOnly()">✉️ Enviar emails automáticamente</button>
+      <button class="btn bs sm" onclick="exportCSV()">📥 CSV</button>
+      <button class="btn bs sm" onclick="gotoStep(1)">← Nueva búsqueda</button>
+    </div>
+  </div>
+  <div id="spWrap" style="display:none;margin-bottom:14px">
+    <div class="prog-wrap">
+      <div class="prog-lbl"><span id="spLbl">Enviando...</span><span id="spPct">0%</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="spFill" style="width:0%"></div></div>
+    </div>
+    <div class="log" id="sendLog"></div>
+  </div>
+
+  <!-- Tabs: Nuevos / Ya contactados -->
+  <div class="rtabs">
+    <button class="rtab active" onclick="switchRTab('new',this)">🆕 Nuevos</button>
+    <button class="rtab" onclick="switchRTab('skip',this)">⚠️ Ya contactados</button>
+  </div>
+  <div class="section active" id="secNew"><div id="bizList" class="bizlist"></div></div>
+  <div class="section" id="secSkip"><div id="skipList" class="bizlist"></div></div>
+</div>
+
+<!-- ══ PANEL 5 — HISTORIAL ══ -->
+<div class="panel" id="p5">
+  <div class="ptitle">// Historial de prospectos contactados</div>
+  <div class="rh">
+    <div class="rt">Total contactados: <span class="cpill" id="histCount">0</span></div>
+    <div class="row">
+      <button class="btn bs sm" onclick="exportHistCSV()">📥 Exportar historial CSV</button>
+      <button class="btn sm" style="background:rgba(255,77,109,0.1);color:var(--accent);border:1px solid rgba(255,77,109,0.3)" onclick="clearHistory()">🗑️ Borrar historial</button>
+      <button class="btn bs sm" onclick="gotoStep(1)">← Volver</button>
+    </div>
+  </div>
+  <div id="histList"></div>
+</div>
+
+
+<!-- ══ PANEL WA MODE ══ -->
+<div id="waOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#1a1a26;border:1px solid #2a2a3d;border-radius:20px;padding:32px;max-width:560px;width:100%;text-align:center;position:relative;">
+    <!-- Header -->
+    <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#6b6b8a;margin-bottom:8px">Modo envío WhatsApp</div>
+    <div id="waModeProgress" style="font-family:'Syne',sans-serif;font-size:14px;color:#6b6b8a;margin-bottom:20px">0 / 0</div>
+
+    <!-- Progress bar -->
+    <div style="height:3px;background:#2a2a3d;border-radius:2px;overflow:hidden;margin-bottom:24px">
+      <div id="waModeBar" style="height:100%;background:linear-gradient(90deg,#25d366,#128c7e);border-radius:2px;transition:width 0.4s;width:0%"></div>
+    </div>
+
+    <!-- Business name -->
+    <div id="waModeIcon" style="font-size:40px;margin-bottom:12px">📱</div>
+    <div id="waModeName" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px;color:#e8e8f0">—</div>
+    <div id="waModeAddr" style="font-size:12px;color:#6b6b8a;margin-bottom:6px">—</div>
+    <div id="waModePhone" style="font-size:13px;color:#25d366;margin-bottom:20px">—</div>
+
+    <!-- Message preview -->
+    <div style="background:#1f2c1f;border:1px solid #2a3d2a;border-radius:4px 12px 12px 12px;padding:14px 16px;font-size:12px;line-height:1.8;white-space:pre-wrap;color:#e2f5e2;text-align:left;max-height:160px;overflow-y:auto;margin-bottom:24px;font-family:'DM Mono',monospace" id="waModeMsg"></div>
+
+    <!-- Instruction -->
+    <div style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:10px;padding:14px;margin-bottom:20px;font-size:13px;color:#25d366">
+      👆 Se abrió WhatsApp con el mensaje listo.<br>
+      <strong>Presioná ENTER en WhatsApp para enviar</strong>, luego volvé aquí.
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn bg" id="waModeNextBtn" onclick="waModeNext(true)" style="min-width:160px">✅ Enviado → Siguiente</button>
+      <button class="btn bs" onclick="waModeNext(false)">⏭️ Saltar</button>
+      <button class="btn bs sm" onclick="stopWAMode()" style="color:#ff4d6d;border-color:rgba(255,77,109,0.3)">✖ Detener</button>
+    </div>
+
+    <!-- Counter -->
+    <div style="margin-top:16px;font-size:11px;color:#6b6b8a">
+      ✅ <span id="waModeCount">0</span> enviados · ⏭️ <span id="waModeSkip">0</span> saltados
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ══ STATE ══════════════════════════════════════
+let businesses=[], waSent=0, eSent=0, pvTab='wa';
+let sugTimeout=null;
+
+// ══ HISTORIAL (localStorage) ════════════════════
+function getHistory(){ try{ return JSON.parse(localStorage.getItem('wp_history')||'[]'); }catch{return[];} }
+function saveHistory(h){ localStorage.setItem('wp_history', JSON.stringify(h)); }
+function addToHistory(biz, channels){
+  const h=getHistory();
+  // avoid duplicates by name+address
+  const key=(biz.name+biz.address).toLowerCase();
+  if(!h.find(x=>(x.name+x.address).toLowerCase()===key)){
+    h.unshift({ name:biz.name, type:biz.type, address:biz.address, phone:biz.phone||'', email:biz.email||'', city:biz.city||'', channels, date:new Date().toLocaleDateString('es-AR') });
+    saveHistory(h);
+  }
+}
+function wasContacted(biz){
+  const h=getHistory();
+  const key=(biz.name+biz.address).toLowerCase();
+  return h.find(x=>(x.name+x.address).toLowerCase()===key)||null;
+}
+
+// ══ NAVIGATION ══════════════════════════════════
+function gotoStep(n){
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i+1===n));
+  document.querySelectorAll('.stp').forEach((s,i)=>{
+    s.classList.remove('active','done');
+    if(i+1<n) s.classList.add('done');
+    if(i+1===n) s.classList.add('active');
+  });
+  if(n===5) renderHistory();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function gotoPreview(){ gotoStep(2); renderPV(); setSt('','Revisá los mensajes y editá lo que quieras.'); }
+function gotoSearch(){ gotoStep(3); startSearch(); }
+
+// ══ CITY AUTOCOMPLETE ═══════════════════════════
+async function onCityInput(){
+  clearTimeout(sugTimeout);
+  const val=document.getElementById('cityInput').value.trim();
+  if(val.length<3){ hideSug(); return; }
+  sugTimeout=setTimeout(()=>fetchCitySuggestions(val), 400);
+}
+
+async function fetchCitySuggestions(query){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  if(!apiKey){ showManualHint(); return; }
+  try{
+    const r=await fetch(`/api/autocomplete?input=${encodeURIComponent(query)}&key=${apiKey}`);
+    const d=await r.json();
+    if(d.status==='OK'||d.predictions?.length){
+      showSuggestions(d.predictions||[]);
+    }
+  }catch{ showManualHint(); }
+}
+
+function showSuggestions(preds){
+  const box=document.getElementById('citySug');
+  if(!preds.length){ hideSug(); return; }
+  box.innerHTML=preds.slice(0,5).map(p=>`
+    <div class="city-sug" onclick="selectCity('${escAttr(p.description)}')">
+      <strong>${escAttr(p.structured_formatting?.main_text||p.description)}</strong>
+      <span style="color:var(--muted);font-size:11px;margin-left:6px">${escAttr(p.structured_formatting?.secondary_text||'')}</span>
+    </div>`).join('');
+  box.style.display='block';
+}
+
+function showManualHint(){
+  // No API key yet — just let them type freely, no autocomplete
+  hideSug();
+}
+
+function selectCity(desc){
+  document.getElementById('cityInput').value=desc;
+  hideSug();
+}
+function hideSug(){ document.getElementById('citySug').style.display='none'; }
+function escAttr(s){ return (s||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+
+// ══ PREVIEW ═════════════════════════════════════
+function switchPV(tab){
+  pvTab=tab;
+  document.getElementById('ptWA').classList.toggle('active',tab==='wa');
+  document.getElementById('ptEM').classList.toggle('active',tab==='em');
+  renderPV();
+}
+function renderPV(){
+  const s={name:'Confitería El Ángel',type:'Confitería',address:'Pellegrini 567'};
+  const el=document.getElementById('pvContent');
+  if(pvTab==='wa'){
+    el.innerHTML=`<div class="wa-bubble">${esc(build(document.getElementById('waTpl').value,s))}</div>`;
+  } else {
+    el.innerHTML=`
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Asunto</div>
+      <div class="em-subj">${esc(build(document.getElementById('emSubj').value,s))}</div>
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 6px;text-transform:uppercase;letter-spacing:1px">Cuerpo</div>
+      <div class="em-body">${esc(build(document.getElementById('emTpl').value,s))}</div>`;
+  }
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+// ══ MESSAGE BUILDER ══════════════════════════════
+function build(tpl,biz){
+  const city=(document.getElementById('cityInput').value||'tu ciudad').split(',')[0];
+  return tpl
+    .replace(/{NOMBRE}/g,biz.name).replace(/{TIPO}/g,biz.type).replace(/{CIUDAD}/g,city)
+    .replace(/{MI_NOMBRE}/g,'Cristian Ferreyra').replace(/{MI_EMPRESA}/g,'CRISFERRE-ANALISTA')
+    .replace(/{MI_EMAIL}/g,document.getElementById('myEmail').value||'')
+    .replace(/{MI_TELEFONO}/g,document.getElementById('myPhone').value||'');
+}
+
+// ══ SEARCH ══════════════════════════════════════
+async function startSearch(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const city=document.getElementById('cityInput').value.trim();
+  const type=document.getElementById('bizType').value;
+  const maxR=parseInt(document.getElementById('maxR').value);
+  if(!apiKey){ gotoStep(1); setSt('err','⚠️ Falta la Google Places API Key'); return; }
+  if(!city){ gotoStep(1); setSt('err','⚠️ Escribí el nombre de la ciudad'); return; }
+
+  document.getElementById('logBox').innerHTML='';
+  log('nf',`📍 Geocodificando "${city}"...`);
+  setP(5,'Geocodificando ciudad...');
+  setSt('on','Buscando...');
+
+  try{
+    const gr=await fetch(`/api/geocode?address=${encodeURIComponent(city)}&key=${apiKey}`);
+    const gd=await gr.json();
+    if(gd.status!=='OK') throw new Error(`No se encontró la ciudad "${city}". Verificá el nombre.`);
+    const loc=gd.results[0].geometry.location;
+    const cityName=gd.results[0].address_components[0]?.long_name||city.split(',')[0];
+    log('ok',`📍 ${gd.results[0].formatted_address}`);
+
+    const GROUPS={
+      food:['restaurant','cafe','bakery','bar'],
+      health:['physiotherapist','dentist','doctor','pharmacy','hospital'],
+      beauty:['beauty_salon','hair_care','spa','nail_salon'],
+      fitness:['gym'],
+      store:['clothing_store','shoe_store','jewelry_store','furniture_store','florist','pet_store'],
+      services:['lawyer','accounting','real_estate_agency','insurance_agency','travel_agency','electrician','plumber']
+    };
+    const types=GROUPS[type]||[type];
+    const all=[];
+
+    for(const t of types){
+      let pagetoken=null, pages=0;
+      while(all.length<maxR && pages<3){
+        const params=pagetoken
+          ?`/api/nearbysearch?pagetoken=${pagetoken}&key=${apiKey}`
+          :`/api/nearbysearch?location=${loc.lat},${loc.lng}&radius=10000&type=${t}&key=${apiKey}`;
+        const r=await fetch(params); const d=await r.json();
+        if(d.status!=='OK'&&d.status!=='ZERO_RESULTS') throw new Error(`Places API: ${d.status}`);
+        for(const p of (d.results||[])){
+          if(all.length>=maxR) break;
+          setP(10+Math.round(80*(all.length/maxR)),`Analizando: ${p.name}`);
+          const det=await getDetail(apiKey,p.place_id);
+          all.push({
+            name:p.name, type:fmtT(t), city:cityName,
+            address:p.vicinity||'', phone:det.phone||null,
+            email:det.email||null, instagram:det.ig||null,
+            rating:p.rating||null, website:det.website||null,
+            maps_url:`https://maps.google.com/?place_id=${p.place_id}`
+          });
+          log(det.website?'er':'ok',`${det.website?'🌐 con web':'🚫 sin web'} — ${p.name}${det.ig?' 📸'+det.ig:''}`);
+        }
+        pagetoken=d.next_page_token||null;
+        if(pagetoken) await sleep(2000);
+        pages++;
+      }
+    }
+
+    businesses=all.filter(b=>!b.website);
+    setP(100,'✅ Búsqueda completa');
+    log('ok',`${all.length} analizados — ${businesses.length} sin web`);
+    setSt('on',`✅ ${businesses.length} negocios sin web encontrados`);
+    setTimeout(()=>{ gotoStep(4); renderResults(); },700);
+
+  }catch(e){ setSt('err','❌ '+e.message); log('er','❌ '+e.message); }
+}
+
+async function getDetail(apiKey,pid){
+  try{
+    const r=await fetch(`/api/placedetail?place_id=${pid}&key=${apiKey}`);
+    const d=await r.json();
+    const txt=[d.result?.editorial_summary?.overview||'',...(d.result?.reviews||[]).map(rv=>rv.text||'')].join(' ');
+    const ig=extractIG(d.result?.website||'')||extractIGText(txt);
+    return{website:d.result?.website||null,phone:d.result?.formatted_phone_number||null,email:extractEmail(txt),ig};
+  }catch{return{};}
+}
+function extractEmail(t){const m=t.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);return m?m[0]:null;}
+function extractIG(url){if(!url||!url.includes('instagram.com'))return null;const m=url.match(/instagram\.com\/@?([^\/\?&]+)/);return m?'@'+m[1]:null;}
+function extractIGText(t){const m=t.match(/@([a-zA-Z0-9_.]{3,30})/);return m?m[0]:null;}
+
+// ══ RENDER RESULTS ═══════════════════════════════
+function switchRTab(tab,el){
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('secNew').classList.toggle('active',tab==='new');
+  document.getElementById('secSkip').classList.toggle('active',tab==='skip');
+}
+
+function renderResults(){
+  const newBiz=[], skipped=[];
+  businesses.forEach(b=>{ wasContacted(b)?skipped.push(b):newBiz.push(b); });
+
+  document.getElementById('stT').textContent=businesses.length;
+  document.getElementById('stN').textContent=newBiz.length;
+  document.getElementById('stSkip').textContent=skipped.length;
+  document.getElementById('cpill').textContent=newBiz.length;
+  document.getElementById('stW').textContent=0;
+  document.getElementById('stE').textContent=0;
+  waSent=0; eSent=0;
+
+  // New businesses
+  const c=document.getElementById('bizList');
+  c.innerHTML=newBiz.length?newBiz.map((b,i)=>`
+    <div class="bc" id="bc${i}">
+      <div>
+        <div class="bn">${b.name}</div>
+        <div class="bt">${b.type}</div>
+        <div class="bi">
+          <span class="bd">📍 ${b.address||'Sin dirección'}</span>
+          <span class="bd">🏙️ ${b.city||''}</span>
+          ${b.phone?`<span class="bd">📱 ${b.phone}</span>`:'<span class="bd" style="color:var(--accent)">📱 Sin teléfono</span>'}
+          ${b.email?`<span class="bd">✉️ ${b.email}</span>`:''}
+          ${b.rating?`<span class="bd">⭐ ${b.rating}</span>`:''}
+          <span class="bd"><a href="${b.maps_url}" target="_blank">🗺️ Maps</a></span>
+        </div>
+        <span class="nw">🚫 Sin web</span>${b.instagram?`<span class="ig">📸 ${b.instagram}</span>`:''}
+      </div>
+      <div class="cs" id="cs${i}"><span class="tag tp">⏳ Pendiente</span></div>
+    </div>`).join('')
+    :`<div style="text-align:center;padding:32px;color:var(--muted)">🎉 Todos los negocios encontrados ya fueron contactados anteriormente.</div>`;
+
+  // Already contacted
+  const s=document.getElementById('skipList');
+  s.innerHTML=skipped.length?skipped.map(b=>{
+    const h=wasContacted(b);
+    return `<div class="bc skipped">
+      <div>
+        <div class="bn">${b.name}</div>
+        <div class="bt">${b.type}</div>
+        <div class="bi"><span class="bd">📍 ${b.address}</span></div>
+        <span class="nw">🚫 Sin web</span><span class="already">⚠️ Ya contactado el ${h?.date||'antes'}</span>
+      </div>
+      <div class="cs"><span class="tag tsk">⏭️ Saltado</span></div>
+    </div>`;}).join('')
+    :`<div style="text-align:center;padding:32px;color:var(--muted)">✨ No hay negocios repetidos en esta búsqueda.</div>`;
+}
+
+// ══ SEND ALL ════════════════════════════════════
+// ══ WA MODE ══════════════════════════════════════
+let waModeList=[], waModeIdx=0, waModeSent=0, waModeSkipped=0;
+
+function startWAMode(){
+  const toSend=businesses.filter(b=>!wasContacted(b)&&b.phone);
+  if(!toSend.length){ setSt('err','⚠️ No hay negocios nuevos con teléfono.'); return; }
+  waModeList=toSend; waModeIdx=0; waModeSent=0; waModeSkipped=0;
+  document.getElementById('waBtn').disabled=true;
+  showWAOverlay();
+  waModeShow();
+}
+
+function showWAOverlay(){
+  const o=document.getElementById('waOverlay');
+  o.style.display='flex';
+}
+
+function stopWAMode(){
+  document.getElementById('waOverlay').style.display='none';
+  document.getElementById('waBtn').disabled=false;
+  document.getElementById('waBtn').textContent=`📱 Iniciar envío WhatsApp`;
+  setSt('on',`WhatsApp: ${waModeSent} enviados, ${waModeSkipped} saltados`);
+}
+
+function waModeShow(){
+  if(waModeIdx>=waModeList.length){ waModeFinish(); return; }
+  const b=waModeList[waModeIdx];
+  const total=waModeList.length;
+  const pct=Math.round((waModeIdx/total)*100);
+
+  document.getElementById('waModeProgress').textContent=`${waModeIdx+1} de ${total}`;
+  document.getElementById('waModeBar').style.width=pct+'%';
+  document.getElementById('waModeName').textContent=b.name;
+  document.getElementById('waModeAddr').textContent=b.address+(b.city?' · '+b.city:'');
+  document.getElementById('waModePhone').textContent='📱 '+b.phone;
+  document.getElementById('waModeCount').textContent=waModeSent;
+  document.getElementById('waModeSkip').textContent=waModeSkipped;
+
+  const msg=build(document.getElementById('waTpl').value,b);
+  document.getElementById('waModeMsg').textContent=msg;
+
+  // Open WhatsApp Web with message pre-filled
+  let ph=b.phone.replace(/[\s\-\(\)\+]/g,'');
+  if(!ph.startsWith('54')) ph='54'+ph;
+  window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`, `_blank`);
+}
+
+function waModeNext(sent){
+  const b=waModeList[waModeIdx];
+  if(sent){
+    waModeSent++;
+    addToHistory(b,'WhatsApp');
+    waSent++; document.getElementById('stW').textContent=waSent;
+    // Update card
+    const origIdx=businesses.indexOf(b);
+    const cs=document.getElementById(`cs${origIdx}`), bc=document.getElementById(`bc${origIdx}`);
+    if(cs){ cs.innerHTML=`<span class="tag tw">✅ WA</span>`; bc.classList.add('sw'); }
+    sLog('ok',`📱 WhatsApp → ${b.name}`);
+  } else {
+    waModeSkipped++;
+  }
+  waModeIdx++;
+  document.getElementById('waModeCount').textContent=waModeSent;
+  document.getElementById('waModeSkip').textContent=waModeSkipped;
+  waModeShow();
+}
+
+function waModeFinish(){
+  document.getElementById('waModeName').textContent='✅ ¡Listo!';
+  document.getElementById('waModeAddr').textContent='';
+  document.getElementById('waModePhone').textContent='';
+  document.getElementById('waModeMsg').textContent='';
+  document.getElementById('waModeProgress').textContent=`${waModeList.length} de ${waModeList.length}`;
+  document.getElementById('waModeBar').style.width='100%';
+  document.getElementById('waModeIcon').textContent='🎉';
+  document.getElementById('waModeNextBtn').style.display='none';
+  document.getElementById('waModeCount').textContent=waModeSent;
+  document.getElementById('waModeSkip').textContent=waModeSkipped;
+  setSt('on',`✅ WhatsApp completo: ${waModeSent} enviados`);
+  // auto-close after 3s
+  setTimeout(stopWAMode, 3000);
+}
+
+// ══ EMAILS ONLY ══════════════════════════════════
+async function sendEmailsOnly(){
+  const pub=document.getElementById('ejsPub').value.trim();
+  const svc=document.getElementById('ejsSvc').value.trim();
+  const tpl=document.getElementById('ejsTpl').value.trim();
+  const hasEJS=pub&&svc&&tpl;
+  if(!hasEJS){ setSt('err','⚠️ Configurá EmailJS para enviar emails automáticamente.'); return; }
+  emailjs.init(pub);
+
+  const toSend=businesses.filter(b=>!wasContacted(b)&&b.email);
+  if(!toSend.length){ setSt('err','⚠️ No hay negocios nuevos con email.'); return; }
+
+  document.getElementById('sendBtn').disabled=true;
+  document.getElementById('spWrap').style.display='block';
+  document.getElementById('sendLog').innerHTML='';
+
+  for(let i=0;i<toSend.length;i++){
+    const b=toSend[i];
+    setSP(Math.round((i/toSend.length)*100),`Email ${i+1}/${toSend.length} — ${b.name}`);
+    try{
+      await emailjs.send(svc,tpl,{
+        to_email:b.email, to_name:b.name,
+        subject:build(document.getElementById('emSubj').value,b),
+        message:build(document.getElementById('emTpl').value,b)
+      });
+      eSent++; document.getElementById('stE').textContent=eSent;
+      sLog('ok',`✉️ Email → ${b.email}`);
+      addToHistory(b,'Email');
+      const origIdx=businesses.indexOf(b);
+      const cs=document.getElementById(`cs${origIdx}`),bc=document.getElementById(`bc${origIdx}`);
+      if(cs){ cs.innerHTML=`<span class="tag te">✅ Email</span>`; bc.classList.add('se'); }
+    }catch(e){ sLog('er',`✉️ Error ${b.name}: ${e.message}`); }
+    await sleep(300);
+  }
+
+  setSP(100,`✅ ${eSent} emails enviados`);
+  setSt('on',`✅ Emails enviados: ${eSent}`);
+  document.getElementById('sendBtn').textContent='✅ Emails completados';
+}
+
+// ══ HISTORIAL ═══════════════════════════════════
+function renderHistory(){
+  const h=getHistory();
+  document.getElementById('histCount').textContent=h.length;
+  const el=document.getElementById('histList');
+  if(!h.length){
+    el.innerHTML=`<div style="text-align:center;padding:48px;color:var(--muted)">📭 Todavía no contactaste a ningún negocio.</div>`;
+    return;
+  }
+  el.innerHTML=h.map((x,hi)=>`
+    <div class="hist-item">
+      <div>
+        <div class="hist-name">${x.name}</div>
+        <div class="hist-meta">📍 ${x.address} ${x.city?'· 🏙️ '+x.city:''} · ${x.type}</div>
+        <div class="hist-meta" style="margin-top:3px">
+          ${x.phone?`📱 ${x.phone} `:''} ${x.email?`✉️ ${x.email}`:''}
+        </div>
+      </div>
+      <div class="hist-tags" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="tag tp">📅 ${x.date}</span>
+          ${x.channels.includes('WhatsApp')?'<span class="tag tw">✅ WA</span>':''}
+          ${x.channels.includes('Email')?'<span class="tag te">✅ Email</span>':''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          ${x.phone?`<button class="btn sm" style="background:rgba(37,211,102,0.1);color:#25d366;border:1px solid rgba(37,211,102,0.3);padding:5px 10px;font-size:10px" onclick="reenviarWA(${hi})">🔁 Reenviar WA</button>`:''}
+          ${x.email?`<button class="btn sm" style="background:rgba(6,182,212,0.1);color:var(--accent3);border:1px solid rgba(6,182,212,0.3);padding:5px 10px;font-size:10px" onclick="reenviarEmail(${hi})">🔁 Reenviar Email</button>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function reenviarWA(hi){
+  const h=getHistory();
+  const x=h[hi];
+  if(!x||!x.phone){ alert('Sin número de teléfono.'); return; }
+  const tpl=document.getElementById('waTpl').value;
+  const biz={name:x.name,type:x.type,address:x.address,city:x.city||''};
+  const msg=build(tpl,biz);
+  let ph=x.phone.replace(/[\s\-\(\)\+]/g,'');
+  if(!ph.startsWith('54')) ph='54'+ph;
+  window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+async function reenviarEmail(hi){
+  const h=getHistory();
+  const x=h[hi];
+  if(!x||!x.email){ alert('Sin email.'); return; }
+  const pub=document.getElementById('ejsPub').value.trim();
+  const svc=document.getElementById('ejsSvc').value.trim();
+  const tpl=document.getElementById('ejsTpl').value.trim();
+  if(!pub||!svc||!tpl){ alert('Configurá EmailJS en el Paso 1 para reenviar emails.'); return; }
+  emailjs.init(pub);
+  const biz={name:x.name,type:x.type,address:x.address,city:x.city||''};
+  try{
+    await emailjs.send(svc,tpl,{
+      to_email:x.email, to_name:x.name,
+      subject:build(document.getElementById('emSubj').value,biz),
+      message:build(document.getElementById('emTpl').value,biz)
+    });
+    alert(`✅ Email reenviado a ${x.email}`);
+  }catch(e){ alert('Error al reenviar: '+e.message); }
+}
+
+function clearHistory(){
+  if(!confirm('¿Borrar todo el historial? No se puede deshacer.')) return;
+  localStorage.removeItem('wp_history');
+  renderHistory();
+}
+
+function exportHistCSV(){
+  const h=getHistory();
+  if(!h.length) return;
+  const hdr=['Nombre','Tipo','Ciudad','Dirección','Teléfono','Email','Canales','Fecha'];
+  const rows=h.map(x=>[x.name,x.type,x.city||'',x.address,x.phone||'',x.email||'',x.channels,x.date]);
+  const csv=[hdr,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`historial_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ══ EXPORT RESULTS CSV ══════════════════════════
+function exportCSV(){
+  if(!businesses.length) return;
+  const hdr=['Nombre','Tipo','Ciudad','Dirección','Teléfono','Email','Instagram','Calificación','Maps'];
+  const rows=businesses.map(b=>[b.name,b.type,b.city||'',b.address,b.phone||'',b.email||'',b.instagram||'',b.rating||'',b.maps_url||'']);
+  const csv=[hdr,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`prospectos_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+
+// ══ KEYS PERSISTENTES ════════════════════════════════
+const KEYS_STORE = 'wp_keys';
+function saveKeys(){
+  const data = {
+    apiKey:  document.getElementById('apiKey').value,
+    ejsPub:  document.getElementById('ejsPub').value,
+    ejsSvc:  document.getElementById('ejsSvc').value,
+    ejsTpl:  document.getElementById('ejsTpl').value,
+    myEmail: document.getElementById('myEmail').value,
+    myPhone: document.getElementById('myPhone').value,
+  };
+  localStorage.setItem(KEYS_STORE, JSON.stringify(data));
+}
+function loadKeys(){
+  try{
+    const data = JSON.parse(localStorage.getItem(KEYS_STORE)||'{}');
+    if(data.apiKey)  document.getElementById('apiKey').value  = data.apiKey;
+    if(data.ejsPub)  document.getElementById('ejsPub').value  = data.ejsPub;
+    if(data.ejsSvc)  document.getElementById('ejsSvc').value  = data.ejsSvc;
+    if(data.ejsTpl)  document.getElementById('ejsTpl').value  = data.ejsTpl;
+    if(data.myEmail) document.getElementById('myEmail').value = data.myEmail;
+    if(data.myPhone) document.getElementById('myPhone').value = data.myPhone;
+    if(Object.keys(data).length) setSt('','✅ Configuración cargada automáticamente.');
+  }catch{}
+}
+window.addEventListener('load', loadKeys);
+
+// ══ UTILS ════════════════════════════════════════
+function setSt(t,m){document.getElementById('stxt').textContent=m;const d=document.getElementById('dot');d.className='dot'+(t==='on'?' on':t==='err'?' err':'');}
+function setP(p,l){document.getElementById('pFill').style.width=p+'%';document.getElementById('pLbl').textContent=l;document.getElementById('pPct').textContent=p+'%';}
+function setSP(p,l){document.getElementById('spFill').style.width=p+'%';document.getElementById('spLbl').textContent=l;document.getElementById('spPct').textContent=p+'%';}
+function log(c,m){const b=document.getElementById('logBox');const p=document.createElement('p');p.className=c;p.textContent=m;b.appendChild(p);b.scrollTop=b.scrollHeight;}
+function sLog(c,m){const b=document.getElementById('sendLog');const p=document.createElement('p');p.className=c;p.textContent=m;b.appendChild(p);b.scrollTop=b.scrollHeight;}
+function fmtT(t){const map={restaurant:'Restaurante',cafe:'Cafetería',bakery:'Panadería',bar:'Bar',food:'Gastronomía',physiotherapist:'Kinesiólogo',dentist:'Odontólogo',doctor:'Médico/Consultorio',pharmacy:'Farmacia',hospital:'Clínica/Sanatorio',health:'Salud',beauty_salon:'Estética/Belleza',hair_care:'Peluquería',spa:'Spa',nail_salon:'Manicuría',beauty:'Belleza',gym:'Gimnasio',fitness:'Deporte/Bienestar',clothing_store:'Ropa/Indumentaria',shoe_store:'Zapatería',jewelry_store:'Joyería',furniture_store:'Mueblería',florist:'Florería',pet_store:'Veterinaria/Pet Shop',store:'Comercio',lawyer:'Abogado/Estudio Jurídico',accounting:'Contador/Estudio Contable',real_estate_agency:'Inmobiliaria',insurance_agency:'Seguros',travel_agency:'Agencia de Viajes',electrician:'Electricista',plumber:'Plomero/Gas',services:'Servicio Profesional',school:'Escuela/Instituto',tutoring:'Academia/Tutoría',lodging:'Hotel/Hospedaje',tourist_attraction:'Atractivo Turístico'};return map[t]||t;}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
