@@ -1,0 +1,29 @@
+WebProspector AI — CRISFERRE-ANALISTA
+=======================================
+
+REQUISITO PREVIO
+----------------
+Tener Node.js instalado. Si no lo tenés:
+1. Ir a https://nodejs.org
+2. Descargar la versión "LTS" (la de la izquierda)
+3. Instalarla con todas las opciones por defecto
+
+CÓMO INICIAR LA APP
+--------------------
+1. Descomprimí esta carpeta en cualquier lugar de tu PC
+2. Hacé doble click en "INICIAR.bat"
+3. Se abre solo el navegador en http://localhost:3000
+4. La primera vez instala dependencias (tarda ~30 segundos)
+
+CÓMO CERRAR LA APP
+-------------------
+Cerrá la ventana negra (terminal) que se abre con el .bat
+
+DATOS QUE NECESITÁS TENER LISTOS
+----------------------------------
+- Google Places API Key (AIza...)
+- EmailJS Public Key
+- EmailJS Service ID  (service_...)
+- EmailJS Template ID (template_...)
+- Tu Gmail
+- Tu número de WhatsApp con código de país (+5493624...)
